@@ -1,11 +1,7 @@
 var should = require('should');
 var LogInterceptor = require("../lib/logInterceptor.js");
 
-var objectToLog = function(){
-	var self = this;
-	self.logger = logger.create();
-
-};
+var objectToLog = function(){};
 
 objectToLog.prototype.log = function(){
 	var self = this;
@@ -19,26 +15,66 @@ objectToLog.prototype.someMethod = function(value){
 	return value+1;
 };
 
-var doStuff = function () {
-	console.log("do stuff");
-	return 1234;
-}
+function interceptorContext(){
+	var self = this;
+	self.logMessage = undefined;
+	self.error = undefined;
+	self.methodHasBeenCalled = false;
+	self.debugHasBeenCalled = false;
+	self.errorHasBeenCalled = false;
 
-describe('When action executing an action',function(){
-	this.timeout(60000);
+	self.logInterceptor = new LogInterceptor();
+	self.logInterceptor.method = function(){self.methodHasBeenCalled = true;};
+	self.logInterceptor.debug = function(message){self.debugHasBeenCalled = true; self.logMessage = message;};
+	self.logInterceptor.error = function(error){self.errorHasBeenCalled = true; self.error = error;};
 
-	// it("should do stuff",function(onComplete){
-	// 	var 
-	// 	onComplete();
-	// });
+	return self;
+};
 
-	it("should do stuff",function(onComplete){
-		
-		var d = new LogInterceptor(doStuff);
-		var result = d();
+describe('Given using a log interceptor',function(){
+	describe('When has a method to log',function(){
+		var context = new interceptorContext();
 
-		console.log(JSON.stringify(result));
-		//d();
-		onComplete();
+		it("should call method",function(onComplete){
+			context.logInterceptor.functionInvocation();
+			context.methodHasBeenCalled.should.be.eql(true);
+			onComplete();
+		});
+
+		it("should call debug log",function(onComplete){
+			context.logInterceptor.functionInvocation();
+			context.debugHasBeenCalled.should.be.eql(true);
+			onComplete();
+		});
+	});
+
+	describe('When method to log throws an exception',function(){
+		var context = new interceptorContext();
+		context.logInterceptor.method = function(){throw new Error("Something bad happened.") };
+		it("should throw error",function(onComplete){
+			try{
+				context.logInterceptor.functionInvocation();
+			}catch(exception){
+				onComplete();
+			}	
+		});
+
+		it("should call error log",function(onComplete){
+			try{
+				context.logInterceptor.functionInvocation();
+			}catch(exception){
+				context.errorHasBeenCalled = true;
+				onComplete();
+			}	
+		});
+
+		it("error should be in error message",function(onComplete){
+			try{
+				context.logInterceptor.functionInvocation();
+			}catch(exception){
+				context.error.toString().indexOf(exception).should.be.greaterThan(-1);
+				onComplete();
+			}	
+		});
 	});
 });

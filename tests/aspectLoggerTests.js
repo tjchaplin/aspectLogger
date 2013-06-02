@@ -1,52 +1,47 @@
 var should = require('should');
-var logger = require("../lib/aspectLogger.js");
+var AspectLogger = require("../lib/aspectLogger.js");
 
-var objectToLog = function(){
-	var self = this;
-	self.logger = logger.create();
+var ObjectToLog = function(){};
 
-};
-
-objectToLog.prototype.log = function(){
+ObjectToLog.prototype.log = function(){
 	var self = this;
 	self.someMethod = self.logger.intercept(self.someMethod);
 };
 
-objectToLog.prototype.someMethod = function(value){
-	value = 1;
+ObjectToLog.prototype.someMethod = function(value){
 	console.log("In some method"+JSON.stringify(value));
-
 	return value+1;
 };
 
-var doStuff = function () {
-	console.log("do stuff");
-	return 1234;
-}
-
-describe('When action executing an action',function(){
-	this.timeout(60000);
-
-	it("should do stuff",function(onComplete){
-		console.log(logger);
-		var o = new objectToLog();
-		o.log();
-		var result = o.someMethod();
-
-		console.log(result);
-		result.should.be.eql(2);
-		
-
-		onComplete();
+describe('Given using a Aspect Logger',function(){
+	describe('When creating logging aspect',function(){
+		it("should still return method results",function(onComplete){
+			var objectToLog = AspectLogger.proxy(ObjectToLog);
+			var result = objectToLog.someMethod(1);
+			result.should.be.eql(2);
+			onComplete();
+		});
 	});
+});
 
-	// it("should do stuff",function(onComplete){
-	// 	console.log(logger);
-	// 	var d = logger.intercept(doStuff);
-	// 	var result = d();
+ function ObjectToLog2(){
+	var self = this;
+	self = AspectLogger.proxy(self);
+	return self;
+};
 
-	// 	console.log(JSON.stringify(result));
-	// 	//d();
-	// 	onComplete();
-	// });
+ObjectToLog2.prototype.someMethod = function(value){
+	console.log("In some method2"+JSON.stringify(value));
+	return value+1;
+};
+
+describe('Given using a Aspect Logger',function(){
+	describe('When creating logging aspect',function(){
+		it("should still return method results",function(onComplete){
+			var objectToLog = new ObjectToLog2();
+			var result = objectToLog.someMethod(1);
+			result.should.be.eql(2);
+			onComplete();
+		});
+	});
 });

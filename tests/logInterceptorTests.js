@@ -1,20 +1,6 @@
 var should = require('should');
 var LogInterceptor = require("../lib/logInterceptor.js");
 
-var objectToLog = function(){};
-
-objectToLog.prototype.log = function(){
-	var self = this;
-	self.someMethod = self.logger.intercept(self.someMethod);
-};
-
-objectToLog.prototype.someMethod = function(value){
-	value = 1;
-	console.log("In some method"+JSON.stringify(value));
-
-	return value+1;
-};
-
 function interceptorContext(){
 	var self = this;
 	self.logMessage = undefined;
@@ -34,47 +20,61 @@ function interceptorContext(){
 describe('Given using a log interceptor',function(){
 	describe('When has a method to log',function(){
 		var context = new interceptorContext();
-
-		it("should call method",function(onComplete){
-			context.logInterceptor.functionInvocation();
-			context.methodHasBeenCalled.should.be.eql(true);
-			onComplete();
-		});
+		function function1(){};
+		function1.prototype.add1 = function(value){
+			if(!value)
+				value = 1;
+			return value+1;
+		};
 
 		it("should call debug log",function(onComplete){
-			context.logInterceptor.functionInvocation();
+			var objectToLog = new function1();	
+			context.logInterceptor.functionInvocation(objectToLog.add1);
 			context.debugHasBeenCalled.should.be.eql(true);
 			onComplete();
 		});
 	});
+	describe('When has a method to log with parameters',function(){
+		var context = new interceptorContext();
+		function function1(){};
+		function1.prototype.add1 = function(value){
+			if(!value)
+				value = 1;
 
+			return value+1;
+		};
+
+		it("should call debug log",function(onComplete){
+			var objectToLog = new function1();	
+			var result = context.logInterceptor.functionInvocation(objectToLog.add1,2);
+			result.should.be.eql(3);
+			onComplete();
+		});
+	});
 	describe('When method to log throws an exception',function(){
 		var context = new interceptorContext();
-		context.logInterceptor.method = function(){throw new Error("Something bad happened.") };
+		var errorFunction = function(){throw new Error("Something bad happened.") };
+		var didThrowError = false;
+		var thrownException;
+		try{
+			context.logInterceptor.functionInvocation(errorFunction);
+		}catch(exception){
+			didThrowError = true;
+			thrownException = exception;
+		}	
 		it("should throw error",function(onComplete){
-			try{
-				context.logInterceptor.functionInvocation();
-			}catch(exception){
-				onComplete();
-			}	
+			didThrowError.should.be.eql(true);
+			onComplete();
 		});
 
 		it("should call error log",function(onComplete){
-			try{
-				context.logInterceptor.functionInvocation();
-			}catch(exception){
-				context.errorHasBeenCalled = true;
-				onComplete();
-			}	
+			context.errorHasBeenCalled.should.be.eql(true);
+			onComplete();
 		});
 
 		it("error should be in error message",function(onComplete){
-			try{
-				context.logInterceptor.functionInvocation();
-			}catch(exception){
-				context.error.toString().indexOf(exception).should.be.greaterThan(-1);
-				onComplete();
-			}	
+			context.error.toString().indexOf(thrownException).should.be.greaterThan(-1);
+			onComplete();
 		});
 	});
 });

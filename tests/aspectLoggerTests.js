@@ -1,46 +1,59 @@
 var should = require('should');
 var AspectLogger = require("../lib/aspectLogger.js");
 
-var ObjectToLog = function(){};
-
-ObjectToLog.prototype.log = function(){
-	var self = this;
-	self.someMethod = self.logger.intercept(self.someMethod);
+// AspectLogger.bindLogger()
+// AspectLogger.appender().bindLogger();
+// AspectLogger.appender().bindLogger();
+// AspectLogger.reset();
+var TestAppender = function(){
+	this.didAppend = false;
 };
+TestAppender.prototype.append = function(message){this.didAppend = true; this.message = message;} 	
 
-ObjectToLog.prototype.someMethod = function(value){
-	console.log("In some method"+JSON.stringify(value));
-	return value+1;
-};
 
 describe('Given using a Aspect Logger',function(){
 	describe('When creating logging aspect',function(){
-		it("should still return method results",function(onComplete){
-			var objectToLog = AspectLogger.proxy(ObjectToLog);
-			var result = objectToLog.someMethod(1);
-			result.should.be.eql(2);
+		it("should return method results without modification",function(onComplete){
+			AspectLogger.unBindLogger();
+
+			function ObjectToLog(){};
+			ObjectToLog.prototype.someMethod = function(){return 1;};
+			var testAppender = new TestAppender();
+			AspectLogger.appender(testAppender).bindLogger(ObjectToLog);
+			var objectToLog = new ObjectToLog();
+			var result = objectToLog.someMethod();
+			result.should.be.eql(1);
 			onComplete();
 		});
 	});
-});
+	describe('When removing the bound logger',function(){
+		it("should not log",function(onComplete){
+			AspectLogger.unBindLogger();
 
- function ObjectToLog2(){
-	var self = this;
-	self = AspectLogger.proxy(self);
-	return self;
-};
+			function ObjectToLog(){};
+			ObjectToLog.prototype.someMethod = function(){return 1;};
+			var testAppender = new TestAppender();
+			AspectLogger.appender(testAppender).bindLogger(ObjectToLog);
+			AspectLogger.unBindLogger();
 
-ObjectToLog2.prototype.someMethod = function(value){
-	console.log("In some method2"+JSON.stringify(value));
-	return value+1;
-};
+			var objectToLog = new ObjectToLog();
+			objectToLog.someMethod();
+			testAppender.didAppend.should.be.eql(false);
+			onComplete();
+		});
+	});
+	describe('When binding a logger',function(){
+		it("should log",function(onComplete){
+			AspectLogger.unBindLogger();
 
-describe('Given using a Aspect Logger',function(){
-	describe('When creating logging aspect',function(){
-		it("should still return method results",function(onComplete){
-			var objectToLog = new ObjectToLog2();
-			var result = objectToLog.someMethod(1);
-			result.should.be.eql(2);
+			function ObjectToLog(){};
+			ObjectToLog.prototype.someMethod = function(){return 1;};
+			var testAppender = new TestAppender();
+			AspectLogger.appender(testAppender).bindLogger(ObjectToLog);
+
+			var objectToLog = new ObjectToLog();
+			objectToLog.someMethod();
+			testAppender.didAppend.should.be.eql(true);
 			onComplete();
 		});
 	});
